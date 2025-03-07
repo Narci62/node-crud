@@ -1,1 +1,277 @@
-// Insert your post.html code here.
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Créer et Gérer des Publications</title>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f5f5;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    header {
+      background-color: #0077cc;
+      color: #fff;
+      padding: 20px;
+      text-align: right;
+    }
+    h1 {
+      color: #333;
+      font-size: 2.5em;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    .post-form, .post-list {
+      width: 60%;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    label, textarea {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 1.2em;
+      color: #333;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #0099ff;
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .post {
+      border-bottom: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .post-text {
+      flex-grow: 1;
+      margin-right: 10px;
+      font-size: 1.1em;
+      color: #333;
+    }
+    .edit-post-btn, .delete-post-btn {
+      padding: 8px;
+      margin-right: 5px;
+      cursor: pointer;
+      background-color: #0099ff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+    }
+    .pagination {
+      margin-top: 20px;
+    }
+    .pagination button {
+      background-color: #0099ff;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      margin: 0 5px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+    .pagination button:hover {
+      background-color: #0077cc;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button id="logoutBtn" onclick="logout()">Déconnexion</button>
+  </header>
+
+  <h1>Créer et Gérer des Publications</h1>
+
+  <div class="post-form">
+    <label for="text">Créer une nouvelle publication :</label>
+    <textarea id="text" name="text" rows="4" required></textarea>
+    <button onclick="createPost()">Créer une Publication</button>
+  </div>
+
+  <div class="post-list" id="postList"></div>
+  <div class="pagination" id="pagination"></div>
+
+  <script>
+    const postsPerPage = 3;
+    let currentPage = 1;
+
+    // Au chargement de la page, récupérer les publications
+    document.addEventListener('DOMContentLoaded', () => {
+      getPosts();
+    });
+
+    // Créer une nouvelle publication
+    async function createPost() {
+      const text = document.getElementById('text').value;
+      if (!text) return alert('Le texte de la publication ne peut pas être vide');
+
+      try {
+        const response = await fetch('/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          document.getElementById('text').value = '';
+          currentPage = 1; // Réinitialiser à la première page après la nouvelle publication
+          getPosts(); // Rafraîchir la liste
+        } else {
+          alert(data.message);
+        }
+      } catch (error) {
+        console.error('Erreur :', error);
+        alert('Erreur lors de la création de la publication');
+      }
+    }
+
+    // Récupérer les publications du serveur
+    async function getPosts() {
+      try {
+        const response = await fetch('/posts', { method: 'GET' });
+        const data = await response.json();
+        if (response.ok) {
+          renderPosts(data.posts);
+        } else {
+          console.error(data.message);
+        }
+      } catch (error) {
+        console.error('Erreur :', error);
+      }
+    }
+
+    // Rendre les publications dans le DOM avec pagination
+    function renderPosts(posts) {
+      const postList = document.getElementById('postList');
+      const pagination = document.getElementById('pagination');
+      postList.innerHTML = '';
+
+      if (posts.length === 0) {
+        postList.innerHTML = '<p>Aucune publication disponible.</p>';
+        pagination.innerHTML = '';
+        return;
+      }
+
+      // Calculer les indices de découpage pour la page actuelle
+      const startIndex = (currentPage - 1) * postsPerPage;
+      const endIndex = startIndex + postsPerPage;
+      const paginatedPosts = posts.slice(startIndex, endIndex);
+
+      // Rendre les publications pour la page actuelle
+      paginatedPosts.forEach(post => {
+        const postDiv = document.createElement('div');
+        postDiv.className = 'post';
+
+        const postText = document.createElement('div');
+        postText.className = 'post-text';
+        postText.textContent = post.text;
+
+        // Bouton Modifier
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Modifier';
+        editButton.className = 'edit-post-btn';
+        editButton.onclick = () => editPost(post);
+
+        // Bouton Supprimer
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Supprimer';
+        deleteButton.className = 'delete-post-btn';
+        deleteButton.onclick = () => deletePost(post._id);
+
+        postDiv.appendChild(postText);
+        postDiv.appendChild(editButton);
+        postDiv.appendChild(deleteButton);
+        postList.appendChild(postDiv);
+      });
+
+      // Créer des boutons de pagination
+      const totalPages = Math.ceil(posts.length / postsPerPage);
+      pagination.innerHTML = '';
+      for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.textContent = i;
+        pageButton.onclick = () => {
+          currentPage = i;
+          renderPosts(posts);
+        };
+        // Mettre en surbrillance le bouton de page active
+        if (i === currentPage) {
+          pageButton.style.fontWeight = 'bold';
+        }
+        pagination.appendChild(pageButton);
+      }
+    }
+
+    // Demander pour modifier puis mettre à jour la publication
+    function editPost(post) {
+      const newText = prompt('Modifier votre publication :', post.text);
+      if (newText !== null && newText !== post.text) {
+        updatePost(post._id, newText);
+      }
+    }
+
+    // Mettre à jour une publication via l'API
+    async function updatePost(postId, text) {
+      try {
+        const response = await fetch(`/posts/${postId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          getPosts(); // Rafraîchir la liste
+        } else {
+          alert(data.message);
+        }
+      } catch (error) {
+        console.error('Erreur :', error);
+        alert('Erreur lors de la mise à jour de la publication');
+      }
+    }
+
+    // Supprimer une publication via l'API
+    async function deletePost(postId) {
+      try {
+        const response = await fetch(`/posts/${postId}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (response.ok) {
+          getPosts();
+        } else {
+          alert(data.message);
+        }
+      } catch (error) {
+        console.error('Erreur :', error);
+        alert('Erreur lors de la suppression de la publication');
+      }
+    }
+
+    // Déconnexion en redirigeant vers le point de terminaison de déconnexion
+    function logout() {
+      window.location.href = '/logout';
+    }
+  </script>
+</body>
+</html>

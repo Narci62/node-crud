@@ -10,7 +10,8 @@ const SECRET_KEY = 'your_secret_key';
 
 mongoose.set('strictQuery', false);
 
-const uri =  "mongodb://root:5ChWA5BqFA0M7OhdJ77T8um1@172.21.136.10:27017";
+//const uri =  "mongodb://root:5ChWA5BqFA0M7OhdJ77T8um1@172.21.136.10:27017";
+const uri =  "mongodb://mongodb:27017";
 mongoose.connect(uri,{'dbName':'SocialDB'});
 
 const User = mongoose.model('User', { username: String, email: String, password: String });
@@ -85,7 +86,8 @@ app.post('/register', async (req, res) => {
       req.session.token = token;
   
       // Respond with success message
-      res.send({"message":`The user ${username} has been added`});
+      //res.send({"message":`The user ${username} has been added`});
+      res.redirect(`/index?username=${newUser.username}`);
     } catch (error) {
       console.error(error);
       // Handle server errors
@@ -112,7 +114,8 @@ app.post('/login', async (req, res) => {
     } catch (error) {
       console.error(error);
       // Handle server errors
-      res.status(500).json({ message: 'Internal Server Error' });
+      //res.status(500).json({ message: 'Internal Server Error' });
+      res.redirect(`/index?username=${user.username}`);
     }
   });
 
@@ -190,5 +193,11 @@ app.delete('/posts/:postId', authenticateJWT, async (req, res) => {
 });
 
 // Insert your user logout code here.
+app.get('/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) console.error(err); // Log any session destruction errors
+      res.redirect('/login'); // Redirect to login page after logout
+    });
+  });
 
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
