@@ -149,8 +149,45 @@ app.get('/posts', authenticateJWT, async (req, res) => {
 });
 
 // Insert your post updation code here.
+app.put('/posts/:postId', authenticateJWT, async (req, res) => {
+    const postId = req.params.postId;
+    const { text } = req.body;
+
+    try {
+        // Find and update the post, ensuring it's owned by the authenticated user
+        const post = await Post.findOneAndUpdate(
+            { _id: postId, userId: req.user.userId },
+            { text },
+            { new: true } // Return updated post
+        );
+
+        // Return error if post not found
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+
+        res.json({ message: 'Post updated successfully', updatedPost: post });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
 
 // Insert your post deletion code here.
+app.delete('/posts/:postId', authenticateJWT, async (req, res) => {
+    const postId = req.params.postId;
+
+    try {
+        // Find and delete the post, ensuring it's owned by the authenticated user
+        const post = await Post.findOneAndDelete({ _id: postId, userId: req.user.userId });
+
+        // Return error if post not found
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+
+        res.json({ message: 'Post deleted successfully', deletedPost: post });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
 
 // Insert your user logout code here.
 
